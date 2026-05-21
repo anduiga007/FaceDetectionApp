@@ -22,9 +22,9 @@ public class FaceDetector {
                 grayImg,
                 faces,
                 1.1,
-                5,
+                4,
                 0,
-                new Size(30, 30),
+                new Size(40, 40),
                 new Size()
         );
         return faces;

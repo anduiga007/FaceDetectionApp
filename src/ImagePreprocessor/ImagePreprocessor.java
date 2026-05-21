@@ -1,4 +1,4 @@
-package preprocessing;
+package ImagePreprocessor;
 
 import org.opencv.core.Mat;
 import org.opencv.imgcodecs.Imgcodecs;
