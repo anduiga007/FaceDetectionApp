@@ -7,7 +7,17 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="opencv-4120" level="project" />
-    <orderEntry type="library" name="opencv-4121" level="project" />
+    <orderEntry type="module-library" exported="">
+      <library>
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/../FaceDetectionApp/opencv/build/java/opencv-490.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES>
+          <root url="jar://$MODULE_DIR$/../FaceDetectionApp/opencv/build/java/opencv-490.jar!/" />
+          <root url="jar://$MODULE_DIR$/../FaceDetectionApp/opencv/build/java/opencv-490.jar!/" />
+        </SOURCES>
+      </library>
+    </orderEntry>
   </component>
 </module>
