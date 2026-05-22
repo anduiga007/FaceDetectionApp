@@ -3,8 +3,10 @@ import ImagePreprocessor.ImagePreprocessor;
 import ui.AppUI;
 
 import org.opencv.core.*;
+import javax.swing.SwingUtilities;
 
 public class Main {
+
     public static void main(String[] args) {
 
         // 1. Load OpenCV
@@ -72,11 +74,16 @@ public class Main {
         // 7. Vẽ box + hiển thị + lưu
         try {
             Mat result = detector.drawBoxes(original.clone(), faces);
-            ui.showResult(original, result);
+            int faceCount = detector.getFaceCount(faces);
+            ui.showResult(original, result, faceCount);
             ui.saveResult(imagePath, result);
             System.out.println("✅ Hoàn tất! Đã lưu output.jpg.");
         } catch (Exception e) {
             System.err.println("❌ Lỗi hiển thị/lưu: " + e.getMessage());
         }
+    }
+
+    public static void restart() {
+        SwingUtilities.invokeLater(() -> main(new String[]{}));
     }
 }
