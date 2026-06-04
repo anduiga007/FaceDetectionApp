@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="WebcamTest" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="webcam.WebcamTest" />
+    <module name="FaceDetectionApp" />
+    <option name="VM_PARAMETERS" value="-Djava.library.path=C:\opencv\build\java\x64" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
