@@ -1,4 +1,5 @@
 import detection.DNNFaceDetector;
+import detection.MaskClassifier;
 import ImagePreprocessor.ImagePreprocessor;
 import ui.AppUI;
 
@@ -50,11 +51,7 @@ public class Main {
         String modelPath = "resources/face_detection_yunet_2023mar.onnx";
         DNNFaceDetector detector;
         try {
-            detector = new DNNFaceDetector(
-                    modelPath,
-                    original.cols(),
-                    original.rows()
-            );
+            detector = new DNNFaceDetector(modelPath, original.cols(), original.rows());
             System.out.println("✅ Load YuNet model thành công.");
         } catch (Exception e) {
             System.err.println("❌ Không load được model: " + e.getMessage());
@@ -71,9 +68,48 @@ public class Main {
             return;
         }
 
-        // 7. Vẽ box + hiển thị + lưu
+        // -------------------------------------------------------
+        // 6.5 [NGƯỜI 2] Phân loại khẩu trang từng khuôn mặt
+        // -------------------------------------------------------
+        String maskModelPath = "resources/mask_classifier.onnx";
+        Mat result = original.clone();
         try {
-            Mat result = detector.drawBoxes(original.clone(), faces);
+            MaskClassifier classifier = new MaskClassifier(maskModelPath);
+            int faceCount = detector.getFaceCount(faces);
+
+            for (int i = 0; i < faceCount; i++) {
+                // Crop từng khuôn mặt ra
+                Mat faceImg = detector.cropFace(original, faces, i);
+                if (faceImg.empty()) continue;
+
+                // Phân loại: MASK hoặc NO_MASK
+                String label = classifier.classify(faceImg);
+                float confidence = classifier.getConfidence(faceImg);
+
+                // Lấy tọa độ để vẽ box màu
+                int x = (int) faces.get(i, 0)[0];
+                int y = (int) faces.get(i, 1)[0];
+                int w = (int) faces.get(i, 2)[0];
+                int h = (int) faces.get(i, 3)[0];
+                Rect faceRect = new Rect(x, y, w, h);
+
+                // Vẽ box màu theo kết quả (xanh lá / đỏ)
+                detector.drawMaskBox(result, faceRect, label, confidence);
+
+                System.out.println("  Mặt " + (i+1) + ": " + label
+                        + " (" + String.format("%.1f", confidence) + "%)");
+            }
+            System.out.println("✅ Phân loại khẩu trang hoàn tất.");
+
+        } catch (Exception e) {
+            // Nếu chưa có model mask thì fallback về drawBoxes bình thường
+            System.out.println("⚠️ Chưa có MaskClassifier, dùng detect thường: " + e.getMessage());
+            result = detector.drawBoxes(original.clone(), faces);
+        }
+        // -------------------------------------------------------
+
+        // 7. Hiển thị + lưu kết quả
+        try {
             int faceCount = detector.getFaceCount(faces);
             ui.showResult(original, result, faceCount);
             ui.saveResult(imagePath, result);

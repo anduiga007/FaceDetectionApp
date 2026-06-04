@@ -2,7 +2,7 @@
   <configuration default="false" name="OpenCV_Run" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="Main" />
     <module name="FaceDetectionApp" />
-    <option name="VM_PARAMETERS" value="-Djava.library.path=&quot;C:\Users\LE BAO\Documents\Bai tap nhom\FaceDetectionApp\opencv\build\java\x64&quot;" />
+    <option name="VM_PARAMETERS" value="-Djava.library.path=C:\opencv\build\java\x64" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
