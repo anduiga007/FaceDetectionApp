@@ -1,0 +1,237 @@
+================================================================
+   HƯỚNG DẪN CÀI ĐẶT VÀ SỬ DỤNG - FACE MASK DETECTION APP
+   Sử dụng: Java + OpenCV 4.12.0 + IntelliJ IDEA
+================================================================
+
+MỤC LỤC
+--------
+1. Yêu cầu hệ thống
+2. Cài đặt OpenCV
+3. Cấu hình IntelliJ IDEA
+4. Chạy ứng dụng
+5. Mô tả các class chính
+6. Cấu trúc thư mục
+7. Xử lý lỗi thường gặp
+
+================================================================
+1. YÊU CẦU HỆ THỐNG
+================================================================
+
+- Hệ điều hành  : Windows 10/11 (64-bit)
+- Java JDK      : 17 trở lên
+- IntelliJ IDEA : 2023.x trở lên (Community hoặc Ultimate)
+- OpenCV        : 4.12.0
+- RAM           : Tối thiểu 4GB
+- Webcam        : Webcam tích hợp hoặc USB webcam
+- Git           : Để clone project
+
+================================================================
+2. CÀI ĐẶT OPENCV
+================================================================
+
+BƯỚC 1: Tải OpenCV 4.12.0 cho Windows
+---------------------------------------
+  Link tải: https://opencv.org/releases/
+  → Chọn phiên bản 4.12.0 → nhấn "Windows"
+  
+  Hoặc tải thẳng từ GitHub:
+  https://github.com/opencv/opencv/releases/download/4.12.0/opencv-4.12.0-windows.exe
+
+BƯỚC 2: Giải nén
+-----------------
+  - Chạy file opencv-4.12.0-windows.exe
+  - Chọn thư mục giải nén: C:\
+  - Nhấn Extract
+  → Sau khi xong sẽ có thư mục: C:\opencv\
+
+BƯỚC 3: Kiểm tra 2 file quan trọng
+------------------------------------
+  Đảm bảo có 2 file sau tồn tại:
+
+  [JAR]  C:\opencv\build\java\opencv-4120.jar
+  [DLL]  C:\opencv\build\java\x64\opencv_java4120.dll
+
+================================================================
+3. CÀI ĐẶT VÀ CẤU HÌNH INTELLIJ IDEA
+================================================================
+
+BƯỚC 1: Clone project từ GitHub
+---------------------------------
+  Mở terminal (cmd/powershell) và gõ:
+
+  git clone https://github.com/<tên-nhóm>/facedetect.git
+  cd facedetect
+
+  Hoặc trong IntelliJ: File → New → Project from Version Control
+  → Dán URL GitHub vào → Clone
+
+BƯỚC 2: Mở project trong IntelliJ
+------------------------------------
+  File → Open → Chọn thư mục facedetect → OK
+
+BƯỚC 3: Thêm thư viện OpenCV vào project
+------------------------------------------
+  Cách 1 (Tự động - khuyên dùng):
+    Project đã có sẵn cấu hình trong .idea/libraries/opencv_4120.xml
+    trỏ đến C:\opencv\build\java\opencv-4120.jar
+    → IntelliJ tự nhận diện nếu bạn giải nén đúng vào C:\opencv
+
+  Cách 2 (Thủ công nếu cần):
+    a. File → Project Structure (Ctrl+Alt+Shift+S)
+    b. Chọn Libraries → nhấn dấu + → Java
+    c. Trỏ đến: C:\opencv\build\java\opencv-4120.jar
+    d. Nhấn OK → Apply → OK
+
+BƯỚC 4: Kiểm tra SDK
+----------------------
+  File → Project Structure → Project
+  → Project SDK: Chọn JDK 17 (nếu chưa có, nhấn Add SDK)
+  → Language Level: 17
+  → OK
+
+================================================================
+4. CHẠY ỨNG DỤNG
+================================================================
+
+--- TEST 1: Kiểm tra Load Model (không cần webcam) ---
+  1. Mở file: src/webcam/ModelLoader.java
+  2. Nhấn chuột phải vào class → Run 'ModelLoader.main()'
+  3. Kết quả mong đợi trong console:
+       ✅ OpenCV loaded: 4.12.0
+       ✅ YuNet load OK
+       ✅ YOLOv8n-face load OK
+       ✅ Tất cả model load thành công — không crash!
+
+--- TEST 2: Kiểm tra Webcam (hiển thị cửa sổ live) ---
+  1. Chọn run configuration "WebcamTest" ở góc trên phải
+  2. Nhấn nút ▶ Run (hoặc Shift+F10)
+  3. Kết quả mong đợi:
+       - Cửa sổ hiện ra ở giữa màn hình
+       - Hiển thị hình webcam trực tiếp
+       - Thanh dưới hiện: Frame: 640x480 | FPS: ~30
+       - Console in: ✅ Webcam đã mở.
+  4. Đóng cửa sổ để thoát
+
+--- CHẠY ỨNG DỤNG CHÍNH ---
+  1. Chọn run configuration "OpenCV_Run"
+  2. Nhấn ▶ Run
+  3. Hộp thoại chọn ảnh sẽ hiện ra
+  4. Chọn ảnh JPG/PNG chứa khuôn mặt
+  5. Kết quả: Cửa sổ hiển thị ảnh gốc và ảnh đã detect khuôn mặt
+
+================================================================
+5. MÔ TẢ CÁC CLASS CHÍNH
+================================================================
+
+src/
+├── Main.java
+│     Điểm vào chính của ứng dụng.
+│     Load OpenCV → chọn ảnh → detect khuôn mặt → hiển thị kết quả.
+│
+├── webcam/
+│   ├── WebcamCapture.java
+│   │     Quản lý webcam:
+│   │     - openCamera()   : Mở webcam index 0, đặt độ phân giải 640x480
+│   │     - readFrame()    : Đọc 1 frame (trả về Mat)
+│   │     - closeCamera()  : Giải phóng webcam
+│   │     - isOpened()     : Kiểm tra webcam có mở không
+│   │     - getFrameWidth()/getFrameHeight(): Lấy kích thước frame
+│   │
+│   ├── WebcamTest.java
+│   │     Test webcam với giao diện Swing:
+│   │     - Hiển thị live feed 640x480
+│   │     - Hiện FPS realtime
+│   │     - Popup lỗi nếu không có webcam
+│   │
+│   └── ModelLoader.java
+│         Test load 2 model ONNX:
+│         - loadYuNet()   : Load face_detection_yunet_2023mar.onnx
+│         - loadYoloV8()  : Load yolov8n-face.onnx
+│
+├── detection/
+│   └── DNNFaceDetector.java
+│         Nhận diện khuôn mặt dùng YuNet:
+│         - detect()      : Phát hiện khuôn mặt trong ảnh
+│         - drawBoxes()   : Vẽ bounding box và confidence
+│         - getFaceCount(): Đếm số khuôn mặt
+│
+├── ImagePreprocessor/
+│   └── ImagePreprocessor.java
+│         Tiền xử lý ảnh:
+│         - loadImage()   : Đọc ảnh từ file
+│         - toGrayscale() : Chuyển sang grayscale
+│         - equalize()    : Cân bằng histogram
+│
+└── ui/
+    └── AppUI.java
+          Giao diện người dùng:
+          - chooseImageFile(): Hộp thoại chọn ảnh
+          - showResult()     : Hiển thị kết quả
+          - saveResult()     : Lưu ảnh output
+
+================================================================
+6. CẤU TRÚC THƯ MỤC
+================================================================
+
+facedetect/
+├── resources/
+│   ├── face_detection_yunet_2023mar.onnx   ← Model YuNet
+│   └── yolov8n-face.onnx                   ← Model YOLOv8
+│
+├── src/
+│   ├── Main.java
+│   ├── webcam/
+│   │   ├── WebcamCapture.java
+│   │   ├── WebcamTest.java
+│   │   └── ModelLoader.java
+│   ├── detection/
+│   │   └── DNNFaceDetector.java
+│   ├── ImagePreprocessor/
+│   │   └── ImagePreprocessor.java
+│   └── ui/
+│       └── AppUI.java
+│
+├── .idea/
+│   ├── libraries/
+│   │   └── opencv_4120.xml                 ← Cấu hình JAR OpenCV
+│   └── runConfigurations/
+│       ├── OpenCV_Run.xml                  ← Chạy app chính
+│       └── WebcamTest.xml                  ← Chạy test webcam
+│
+└── FaceDetectionApp.iml                    ← Module config
+
+================================================================
+7. XỬ LÝ LỖI THƯỜNG GẶP
+================================================================
+
+❌ Lỗi: "package org.opencv.core does not exist"
+   → Nguyên nhân: IntelliJ chưa nhận JAR OpenCV
+   → Fix: Làm lại Bước 3 mục "CẤU HÌNH INTELLIJ IDEA"
+          Hoặc: File → Invalidate Caches → Restart
+          Kiểm tra C:\opencv\build\java\opencv-4120.jar có tồn tại không
+
+❌ Lỗi: "Cannot load library" hoặc UnsatisfiedLinkError
+   → Nguyên nhân: Thiếu VM option chỉ đường dẫn DLL
+   → Fix: Run → Edit Configurations → chọn config của bạn
+          Thêm vào VM options:
+          -Djava.library.path=C:\opencv\build\java\x64
+
+❌ Lỗi: "Không tìm thấy webcam!"
+   → Nguyên nhân: Webcam bị chiếm bởi ứng dụng khác, hoặc không có webcam
+   → Fix: Đóng các app đang dùng webcam (Teams, Zoom, Camera...)
+          Kiểm tra webcam trong Device Manager
+          Thử đổi index từ 0 sang 1 trong WebcamCapture.java
+
+❌ Lỗi: "Không load được model"
+   → Nguyên nhân: Thiếu file .onnx trong resources/
+   → Fix: Kiểm tra thư mục resources/ có đủ 2 file .onnx không
+          Đảm bảo chạy từ thư mục gốc của project (không phải thư mục src)
+
+❌ Cửa sổ webcam giật lag
+   → Nguyên nhân: CPU yếu hoặc encode JPEG chậm
+   → Fix: Bình thường ở lần chạy đầu, sau vài giây sẽ ổn định
+
+================================================================
+   Nhóm phát triển — Môn học: Xử lý ảnh / Deep Learning
+   Ngày tạo: 04/06/2026
+================================================================
