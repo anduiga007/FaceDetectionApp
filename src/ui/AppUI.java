@@ -1,157 +1,177 @@
+
+
 package ui;
 
-import org.opencv.core.Mat;
-import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
-
 import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.File;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.FileWriter;
+import java.io.IOException;
 
-public class AppUI {
+public class AppUI extends JFrame {
 
-    // Chọn file ảnh
+
+    private int hasMaskCount = 0;
+    private int noMaskCount = 0;
+    private double complianceRate = 0.0;
+
+    public AppUI() {
+
+        setTitle("HỆ THỐNG PHÁT HIỆN KHẨU TRANG - NHÓM 3");
+        setSize(500, 450);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        setLayout(new BorderLayout());
+
+
+        JPanel headerPanel = new JPanel();
+        headerPanel.setBackground(new Color(0x1E, 0x1E, 0x1E));
+        JLabel titleLabel = new JLabel("HỆ THỐNG KIỂM TRA KHẨU TRANG");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        titleLabel.setForeground(Color.WHITE);
+        headerPanel.add(titleLabel);
+        add(headerPanel, BorderLayout.NORTH);
+
+
+        JPanel menuPanel = new JPanel();
+        menuPanel.setBackground(new Color(0x1E, 0x1E, 0x1E));
+        menuPanel.setLayout(new GridLayout(3, 1, 15, 15));
+        menuPanel.setBorder(BorderFactory.createEmptyBorder(30, 50, 30, 50));
+
+        JButton btnUploadImage = createStyledButton("Kiểm tra ảnh — upload ảnh tĩnh");
+        JButton btnWebcam = createStyledButton("Webcam real-time — bật webcam");
+        JButton btnExportReport = createStyledButton("Xuất báo cáo (Report)");
+
+        menuPanel.add(btnUploadImage);
+        menuPanel.add(btnWebcam);
+        menuPanel.add(btnExportReport);
+        add(menuPanel, BorderLayout.CENTER);
+
+
+
+
+        btnUploadImage.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
+                JOptionPane.showMessageDialog(AppUI.this,
+                        "Vui lòng chọn ảnh từ hộp thoại hệ thống vừa xuất hiện!", "Thông báo",
+                        JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+
+
+        btnWebcam.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JOptionPane.showMessageDialog(AppUI.this,
+                        "Đang khởi động Webcam real-time...", "Thông báo",
+                        JOptionPane.INFORMATION_MESSAGE);
+
+
+                setVisible(false);
+
+                try {
+                    webcam.WebcamTest.main(new String[]{});
+                } catch (Exception ex) {
+                    new webcam.WebcamTest();
+                }
+            }
+        });
+
+        btnExportReport.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                exportToTxt();
+            }
+        });
+    }
+    public void updateStatisticsData(int hasMask, int noMask) {
+        this.hasMaskCount = hasMask;
+        this.noMaskCount = noMask;
+        calculateStatistics();
+        showResultDialog();
+
+        if (this.noMaskCount > 0) {
+            JOptionPane.showMessageDialog(null,
+                    "Phát hiện " + this.noMaskCount + " người không đeo khẩu trang!",
+                    "CẢNH BÁO", JOptionPane.WARNING_MESSAGE);
+        }
+    }
+
+    private JButton createStyledButton(String text) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Arial", Font.BOLD, 14));
+        button.setForeground(Color.WHITE);
+        button.setBackground(new Color(0x2D, 0x2D, 0x2D));
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createLineBorder(new Color(0x44, 0x44, 0x44), 1));
+        return button;
+    }
+
+    private void calculateStatistics() {
+        int total = hasMaskCount + noMaskCount;
+        if (total > 0) {
+            complianceRate = ((double) hasMaskCount / total) * 100;
+        } else {
+            complianceRate = 0.0;
+        }
+    }
+    private void showResultDialog() {
+        String resultMessage = String.format(
+                "KẾT QUẢ PHÂN TÍCH:\n\n" +
+                        " Có khẩu trang: %d người\n" +
+                        " Không khẩu trang: %d người\n" +
+                        " Tỉ lệ tuân thủ: %.2f%%",
+                hasMaskCount, noMaskCount, complianceRate);
+
+        JOptionPane.showMessageDialog(this, resultMessage, "THỐNG KÊ", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void exportToTxt() {
+        String filePath = "report.txt";
+        try (FileWriter writer = new FileWriter(filePath)) {
+            writer.write("=========================================\n");
+            writer.write("       BÁO CÁO KẾT QUẢ KIỂM TRA KHẨU TRANG\n");
+            writer.write("=========================================\n");
+            writer.write("Số người CÓ khẩu trang: " + hasMaskCount + " người\n");
+            writer.write("Số người KHÔNG khẩu trang: " + noMaskCount + " người\n");
+            writer.write(String.format("Tỉ lệ tuân thủ quy định: %.2f%%\n", complianceRate));
+            writer.write("-----------------------------------------\n");
+            writer.write("Trạng thái đánh giá: " + (noMaskCount > 0 ? "CẦN NHẮC NHỞ QUY ĐỊNH!" : "AN TOÀN") + "\n");
+            writer.write("=========================================\n");
+
+            JOptionPane.showMessageDialog(this, "Đã xuất báo cáo thành công vào file: " + filePath,
+                    "Xuất File", JOptionPane.INFORMATION_MESSAGE);
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi xuất file báo cáo!",
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
+    }
+
     public String chooseImageFile() {
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Chọn ảnh đầu vào để phát hiện khuôn mặt");
-        FileNameExtensionFilter filter = new FileNameExtensionFilter(
-                "Image Files (*.jpg, *.png)", "jpg", "png");
-        fileChooser.setFileFilter(filter);
-        int result = fileChooser.showOpenDialog(null);
+        fileChooser.setDialogTitle("Chọn ảnh tĩnh để kiểm tra khẩu trang");
+
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+                "Image Files (*.jpg, *.png, *.jpeg)", "jpg", "png", "jpeg"
+        ));
+
+        int result = fileChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             return fileChooser.getSelectedFile().getAbsolutePath();
         }
         return null;
     }
 
-    // Chuyển Mat → BufferedImage để hiện trong Swing
-    private BufferedImage matToBufferedImage(Mat mat) {
-        Mat rgb = new Mat();
-        Imgproc.cvtColor(mat, rgb, Imgproc.COLOR_BGR2RGB);
-        int width = rgb.cols();
-        int height = rgb.rows();
-        byte[] data = new byte[width * height * 3];
-        rgb.get(0, 0, data);
-        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
-        image.getRaster().setDataElements(0, 0, width, height, data);
-        return image;
-    }
-
-    // Scale ảnh vừa với panel
-    private ImageIcon scaleImage(BufferedImage img, int maxW, int maxH) {
-        double scale = Math.min((double) maxW / img.getWidth(), (double) maxH / img.getHeight());
-        int w = (int) (img.getWidth() * scale);
-        int h = (int) (img.getHeight() * scale);
-        Image scaled = img.getScaledInstance(w, h, Image.SCALE_SMOOTH);
-        return new ImageIcon(scaled);
-    }
-
-    // Hiển thị kết quả với giao diện đẹp
-    public void showResult(Mat original, Mat result, int faceCount) {
-        // Tạo cửa sổ chính
-        JFrame frame = new JFrame("🔍 Face Detection App — OpenCV + YuNet");
-        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setLayout(new BorderLayout());
-        frame.getContentPane().setBackground(new Color(30, 30, 30));
-
-        // Thanh tiêu đề thông tin
-        JLabel titleLabel = new JLabel(
-                "  ✅ Phát hiện được " + faceCount + " khuôn mặt",
-                SwingConstants.LEFT
-        );
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        titleLabel.setForeground(new Color(0, 220, 100));
-        titleLabel.setBackground(new Color(20, 20, 20));
-        titleLabel.setOpaque(true);
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
-        frame.add(titleLabel, BorderLayout.NORTH);
-
-        // Panel chứa 2 ảnh
-        JPanel imagePanel = new JPanel(new GridLayout(1, 2, 10, 10));
-        imagePanel.setBackground(new Color(30, 30, 30));
-        imagePanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        // Ảnh gốc
-        BufferedImage origBI = matToBufferedImage(original);
-        JLabel origLabel = new JLabel(scaleImage(origBI, 500, 500));
-        origLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        JPanel origPanel = createImagePanel(origLabel, "Ảnh gốc (Original)");
-        imagePanel.add(origPanel);
-
-        // Ảnh kết quả
-        BufferedImage resultBI = matToBufferedImage(result);
-        JLabel resultLabel = new JLabel(scaleImage(resultBI, 500, 500));
-        resultLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        JPanel resultPanel = createImagePanel(resultLabel, "Kết quả (Detected: " + faceCount + " mặt)");
-        imagePanel.add(resultPanel);
-
-        frame.add(imagePanel, BorderLayout.CENTER);
-
-        // Thanh nút bấm phía dưới
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
-        buttonPanel.setBackground(new Color(20, 20, 20));
-
-        JButton closeButton = new JButton("❌ Đóng");
-        closeButton.setFont(new Font("Arial", Font.BOLD, 13));
-        closeButton.setBackground(new Color(180, 50, 50));
-        closeButton.setForeground(Color.WHITE);
-        closeButton.setFocusPainted(false);
-        closeButton.setBorderPainted(false);
-        closeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        closeButton.addActionListener(e -> frame.dispose());
-
-        JButton newButton = new JButton("📂 Chọn ảnh khác");
-        newButton.setFont(new Font("Arial", Font.BOLD, 13));
-        newButton.setBackground(new Color(50, 120, 200));
-        newButton.setForeground(Color.WHITE);
-        newButton.setFocusPainted(false);
-        newButton.setBorderPainted(false);
-        newButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        newButton.addActionListener(e -> frame.dispose());
-
-        buttonPanel.add(newButton);
-        buttonPanel.add(closeButton);
-        frame.add(buttonPanel, BorderLayout.SOUTH);
-
-        // Hiện cửa sổ
-        frame.setSize(1100, 620);
-        frame.setLocationRelativeTo(null);
-        frame.setVisible(true);
-    }
-
-    // Tạo panel ảnh có tiêu đề
-    private JPanel createImagePanel(JLabel imageLabel, String title) {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(new Color(45, 45, 45));
-        panel.setBorder(BorderFactory.createLineBorder(new Color(70, 70, 70)));
-
-        JLabel titleLabel = new JLabel(title, SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 13));
-        titleLabel.setForeground(new Color(200, 200, 200));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
-        titleLabel.setBackground(new Color(35, 35, 35));
-        titleLabel.setOpaque(true);
-
-        panel.add(titleLabel, BorderLayout.NORTH);
-        panel.add(imageLabel, BorderLayout.CENTER);
-        return panel;
-    }
-
-    // Lưu ảnh kết quả
-    public void saveResult(String originalPath, Mat result) {
-        try {
-            File originalFile = new File(originalPath);
-            String outputPath = originalFile.getParent() + File.separator + "output.jpg";
-            boolean isSaved = Imgcodecs.imwrite(outputPath, result);
-            if (isSaved) {
-                System.out.println("✅ Đã lưu ảnh tại: " + outputPath);
-            } else {
-                System.out.println("❌ Lưu ảnh thất bại!");
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new AppUI().setVisible(true);
             }
-        } catch (Exception e) {
-            System.out.println("❌ Lỗi lưu file: " + e.getMessage());
-        }
+        });
     }
 }
