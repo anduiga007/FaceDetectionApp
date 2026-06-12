@@ -1,0 +1,8 @@
+=========================================
+   BAO CAO KET QUA KIEM TRA KHAU TRANG
+=========================================
+So nguoi CO khau trang: 1 nguoi
+So nguoi KHONG khau trang: 0 nguoi
+Ti le tuan thu: 100.00%
+Trang thai: AN TOAN
+=========================================
