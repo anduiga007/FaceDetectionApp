@@ -4,121 +4,107 @@ import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.FaceDetectorYN;
 
+/**
+ * DNNFaceDetector — bọc YuNet (FaceDetectorYN) của OpenCV.
+ *
+ * YuNet output format per row:
+ *   [x, y, w, h,  x_re, y_re, x_le, y_le,  x_nt, y_nt,
+ *    x_rcm, y_rcm, x_lcm, y_lcm,  score]   (15 cột)
+ */
 public class DNNFaceDetector {
 
-    private FaceDetectorYN detector;
+    private final FaceDetectorYN detector;
 
     public DNNFaceDetector(String modelPath, int width, int height) throws Exception {
         detector = FaceDetectorYN.create(modelPath, "", new Size(width, height));
-        detector.setScoreThreshold(0.6f);   // độ tin cậy tối thiểu
-        detector.setNMSThreshold(0.3f);     // lọc box trùng nhau
-        if (detector == null) {
-            throw new Exception("Không load được model: " + modelPath);
-        }
+        detector.setScoreThreshold(0.60f);
+        detector.setNMSThreshold(0.30f);
+        System.out.println("FaceDetector loaded: " + modelPath);
     }
 
-    // Phát hiện khuôn mặt trong ảnh, trả về Ma trận chứa tọa độ các mặt
-    public Mat detect(Mat colorImg) {
-        // YuNet cần resize input đúng kích thước
-        detector.setInputSize(new Size(colorImg.cols(), colorImg.rows()));
+    // ── Detection ─────────────────────────────────────────────────────────
+
+    /** Phát hiện khuôn mặt trong frame, trả về Mat kết quả (rows = số mặt). */
+    public Mat detect(Mat frame) {
+        detector.setInputSize(new Size(frame.cols(), frame.rows()));
         Mat faces = new Mat();
-        detector.detect(colorImg, faces);
+        detector.detect(frame, faces);
         return faces;
     }
 
-    // Vẽ bounding box mặc định (xanh lá) lên tất cả khuôn mặt phát hiện được
-    public Mat drawBoxes(Mat original, Mat faces) {
-        Mat result = original.clone();
-        for (int i = 0; i < faces.rows(); i++) {
-            // Mỗi row: [x, y, w, h, ...landmarks..., score]
-            int x = (int) faces.get(i, 0)[0];
-            int y = (int) faces.get(i, 1)[0];
-            int w = (int) faces.get(i, 2)[0];
-            int h = (int) faces.get(i, 3)[0];
-
-            // Vẽ bounding box xanh lá
-            Imgproc.rectangle(
-                    result,
-                    new Point(x, y),
-                    new Point(x + w, y + h),
-                    new Scalar(0, 255, 0), 2
-            );
-
-            // Hiện % confidence góc trên box
-            float score = (float) faces.get(i, 14)[0];
-            String label = String.format("%.0f%%", score * 100);
-            Imgproc.putText(
-                    result, label,
-                    new Point(x, y - 5),
-                    Imgproc.FONT_HERSHEY_SIMPLEX,
-                    0.5, new Scalar(0, 255, 0), 1
-            );
-        }
-        return result;
-    }
-
-    // Đếm số khuôn mặt phát hiện được
     public int getFaceCount(Mat faces) {
         return faces.rows();
     }
 
-    /** cải tiến
-     * Crop vùng khuôn mặt thứ "index" từ ảnh gốc
-     * @param original  Ảnh gốc đầy đủ
-     * @param faces     Ma trận kết quả từ detect()
-     * @param index     Chỉ số khuôn mặt muốn crop (bắt đầu từ 0)
-     * @return          Mat chứa vùng ảnh khuôn mặt, hoặc Mat rỗng nếu lỗi
+    // ── Face crop ─────────────────────────────────────────────────────────
+
+    /**
+     * Lấy Rect khuôn mặt thứ index (đã clip vào biên ảnh).
+     * Trả về Rect rỗng nếu lỗi.
      */
-    public Mat cropFace(Mat original, Mat faces, int index) {
+    public Rect getFaceRect(Mat frame, Mat faces, int index) {
         try {
-            // Lấy tọa độ khuôn mặt từ hàng index trong ma trận faces
             int x = (int) faces.get(index, 0)[0];
             int y = (int) faces.get(index, 1)[0];
             int w = (int) faces.get(index, 2)[0];
             int h = (int) faces.get(index, 3)[0];
 
-            // Giới hạn tọa độ trong phạm vi ảnh, tránh crop ra ngoài
             int x1 = Math.max(0, x);
             int y1 = Math.max(0, y);
-            int x2 = Math.min(original.cols(), x1 + w);
-            int y2 = Math.min(original.rows(), y1 + h);
+            int x2 = Math.min(frame.cols(), x1 + w);
+            int y2 = Math.min(frame.rows(), y1 + h);
 
-            // Tạo vùng crop và trả về
-            Rect roi = new Rect(x1, y1, x2 - x1, y2 - y1);
-            return new Mat(original, roi);
-
+            if (x2 <= x1 || y2 <= y1) return new Rect();
+            return new Rect(x1, y1, x2 - x1, y2 - y1);
         } catch (Exception e) {
-            System.out.println("❌ cropFace lỗi tại index " + index + ": " + e.getMessage());
-            return new Mat(); // Trả về Mat rỗng nếu có lỗi
+            return new Rect();
         }
     }
 
     /**
-     * Vẽ bounding box màu theo kết quả phân loại khẩu trang
-     * @param img         Ảnh cần vẽ lên
-     * @param face        Tọa độ vùng khuôn mặt (Rect)
-     * @param label       "MASK" hoặc "NO_MASK"
-     * @param confidence  Độ tin cậy (0-100%)
-     * @return            Ảnh đã vẽ box và nhãn
+     * Crop vùng khuôn mặt thứ index ra thành Mat mới (bộ nhớ liên tục).
+     * Trả về Mat rỗng nếu lỗi.
      */
-    public Mat drawMaskBox(Mat img, Rect face, String label, float confidence) {
-        // Xanh lá nếu có khẩu trang, đỏ nếu không
-        Scalar color = label.equals("MASK")
-                ? new Scalar(0, 255, 0)   // Xanh lá = có khẩu trang
-                : new Scalar(0, 0, 255);  // Đỏ = không có khẩu trang
+    public Mat cropFace(Mat frame, Mat faces, int index) {
+        Rect rect = getFaceRect(frame, faces, index);
+        if (rect.width <= 0 || rect.height <= 0) return new Mat();
+        Mat crop = new Mat();
+        new Mat(frame, rect).copyTo(crop);   // copyTo → bộ nhớ liên tục
+        return crop;
+    }
 
-        // Vẽ hình chữ nhật quanh khuôn mặt
-        Imgproc.rectangle(img, face, color, 2);
+    // ── Drawing ───────────────────────────────────────────────────────────
 
-        // Hiển thị nhãn + % confidence phía trên box
-        String text = label + " " + String.format("%.1f", confidence) + "%";
-        Imgproc.putText(
-                img, text,
-                new Point(face.x, face.y - 10),
-                Imgproc.FONT_HERSHEY_SIMPLEX,
-                0.6, color, 2
-        );
+    /**
+     * Vẽ bounding box + nhãn lên frame.
+     *
+     * @param hasMask  true = xanh lá, false = đỏ
+     * @param label    chuỗi hiện lên ("CO KHAU TRANG" / "KHONG KHAU TRANG")
+     * @param conf     % độ tin cậy
+     */
+    public void drawDetection(Mat frame, Rect rect,
+                              boolean hasMask, String label, float conf) {
+        if (rect.width <= 0) return;
 
-        return img;
+        Scalar boxColor  = hasMask ? new Scalar(40, 200, 40) : new Scalar(30, 30, 230);
+        Scalar textColor = new Scalar(255, 255, 255);
+
+        // Bounding box
+        Imgproc.rectangle(frame, rect, boxColor, 2);
+
+        // Thanh nền chữ
+        String text = (hasMask ? "[OK] " : "[!] ") + label
+                + "  " + String.format("%.0f", conf) + "%";
+        int[] bl = {0};
+        Size ts = Imgproc.getTextSize(text, Imgproc.FONT_HERSHEY_SIMPLEX, 0.55, 2, bl);
+
+        int ty = (rect.y > 30) ? rect.y - 8 : rect.y + rect.height + (int) ts.height + 8;
+        Point tl = new Point(rect.x,           ty);
+        Point br = new Point(rect.x + ts.width + 8, ty - ts.height - 6);
+
+        Imgproc.rectangle(frame, tl, br, boxColor, Imgproc.FILLED);
+        Imgproc.putText(frame, text,
+                new Point(rect.x + 4, ty - 3),
+                Imgproc.FONT_HERSHEY_SIMPLEX, 0.55, textColor, 2);
     }
 }

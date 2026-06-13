@@ -5,65 +5,70 @@ import org.opencv.videoio.VideoCapture;
 import org.opencv.videoio.Videoio;
 
 /**
- * WebcamCapture — Quản lý việc mở/đọc/đóng webcam bằng OpenCV.
- * Mặc định đặt độ phân giải 640x480.
+ * WebcamCapture — wrapper gọn cho VideoCapture của OpenCV.
  */
 public class WebcamCapture {
 
-    private VideoCapture cap;
+    private VideoCapture camera;
+    private final int width;
+    private final int height;
+    private int cameraIndex = 0;
 
-    // ── Mở webcam (index 0 = webcam mặc định) ──────────────────────────────
-    public void openCamera() throws Exception {
-        cap = new VideoCapture(0);
-
-        if (!cap.isOpened()) {
-            throw new Exception("Không tìm thấy webcam!");
-        }
-
-        // Đặt độ phân giải 640x480
-        cap.set(Videoio.CAP_PROP_FRAME_WIDTH,  640);
-        cap.set(Videoio.CAP_PROP_FRAME_HEIGHT, 480);
-
-        System.out.println("✅ Webcam đã mở.");
-        System.out.println("   Độ phân giải: "
-                + (int) cap.get(Videoio.CAP_PROP_FRAME_WIDTH)
-                + "x"
-                + (int) cap.get(Videoio.CAP_PROP_FRAME_HEIGHT));
+    public WebcamCapture() {
+        this(640, 480);
     }
 
-    // ── Đọc 1 frame từ webcam ───────────────────────────────────────────────
-    public Mat readFrame() throws Exception {
-        if (!isOpened()) {
-            throw new Exception("Webcam chưa được mở!");
+    public WebcamCapture(int width, int height) {
+        this.width  = width;
+        this.height = height;
+    }
+
+    /** Mở webcam mặc định (index 0). */
+    public void openCamera() throws Exception {
+        openCamera(0);
+    }
+
+    /** Mở webcam theo index. */
+    public void openCamera(int index) throws Exception {
+        this.cameraIndex = index;
+        camera = new VideoCapture(index);
+        camera.set(Videoio.CAP_PROP_FRAME_WIDTH,  width);
+        camera.set(Videoio.CAP_PROP_FRAME_HEIGHT, height);
+
+        if (!camera.isOpened()) {
+            throw new Exception("Khong the mo webcam " + index
+                    + " (kiem tra ket noi camera)");
         }
+
+        int actualW = (int) camera.get(Videoio.CAP_PROP_FRAME_WIDTH);
+        int actualH = (int) camera.get(Videoio.CAP_PROP_FRAME_HEIGHT);
+        System.out.println("Webcam da mo. Do phan giai: " + actualW + "x" + actualH);
+    }
+
+    /**
+     * Đọc 1 frame từ webcam.
+     * Trả về Mat rỗng nếu lỗi.
+     */
+    public Mat readFrame() {
         Mat frame = new Mat();
-        boolean success = cap.read(frame);
-        if (!success || frame.empty()) {
-            throw new Exception("Không đọc được frame từ webcam!");
+        if (camera != null && camera.isOpened()) {
+            camera.read(frame);
         }
         return frame;
     }
 
-    // ── Đóng webcam (giải phóng tài nguyên) ────────────────────────────────
+    public boolean isOpened() {
+        return camera != null && camera.isOpened();
+    }
+
     public void closeCamera() {
-        if (cap != null && cap.isOpened()) {
-            cap.release();
-            System.out.println("✅ Đã đóng webcam.");
+        if (camera != null && camera.isOpened()) {
+            camera.release();
+            System.out.println("Webcam da dong.");
         }
     }
 
-    // ── Kiểm tra webcam có đang mở không ───────────────────────────────────
-    public boolean isOpened() {
-        return cap != null && cap.isOpened();
-    }
-
-    // ── Lấy chiều rộng frame hiện tại ──────────────────────────────────────
-    public int getFrameWidth() {
-        return isOpened() ? (int) cap.get(Videoio.CAP_PROP_FRAME_WIDTH) : 0;
-    }
-
-    // ── Lấy chiều cao frame hiện tại ───────────────────────────────────────
-    public int getFrameHeight() {
-        return isOpened() ? (int) cap.get(Videoio.CAP_PROP_FRAME_HEIGHT) : 0;
-    }
+    public int getWidth()  { return width;  }
+    public int getHeight() { return height; }
+    public int getCameraIndex() { return cameraIndex; }
 }
